@@ -1,0 +1,92 @@
+#!/usr/bin/env bash
+#
+# https://bitwarden.com/help/cli/
+
+set -u
+
+path_this="$(cd "$(dirname -- "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd -P)/$(basename -- "${BASH_SOURCE[0]}")"
+dir_this="$(dirname -- "${path_this}")"
+base_this="$(basename -- "${path_this}")"
+[ -f "${path_this}" ] && [ -d "${dir_this}" ] && [ -f "${dir_this}/${base_this}" ] || ! echo >&2 "ERROR: could not generate paths" || exit 1
+
+__parse_args() {
+    while (("${#}")); do
+        case "${1}" in
+        --dec-file | -d)
+            mode='decrypt'
+            enc_file_in="${2}"
+            shift
+            ;;
+        --enc | -e)
+            mode='encrypt'
+            ;;
+        --enc-dir)
+            dir_enc_out="${2}"
+            shift
+            ;;
+        *)
+            echo >&2 "ERROR: ${base_this}: unexpected arg='${1}'"
+            return 1
+            ;;
+        esac
+        shift
+    done
+}
+
+__encrypt() {
+    local dir_enc_out="${1:-.}"
+
+    export LC_CTYPE=C
+    export LC_ALL=C
+
+    bw logout >/dev/null 2>&1
+
+    local bw_email=''
+    local bw_pass=''
+
+    read -p "PROMPT: bw email: " -r bw_email
+    read -p "PROMPT: bw pw: " -s -r bw_pass
+
+    local bw_bk_enc_base='bw-export-'
+    local timestamp=''
+    timestamp="$(date "+%y%m%d%H%M%S")" || ! echo 'ERROR: could not generate date' || return 1
+    local bw_bk_enc="${dir_enc_out}/${bw_bk_enc_base}${timestamp}.enc"
+
+    local tmp_bw_session=''
+    tmp_bw_session="$(bw login "${bw_email}" "${bw_pass}" --raw)" || ! echo 'ERROR: could not login' || return 1
+    export BW_SESSION="${tmp_bw_session}"
+
+    bw export --raw --session "${BW_SESSION}" --format json | openssl enc -aes-256-cbc -pbkdf2 -iter 100000 -k "${bw_pass}" -out "${bw_bk_enc}"
+    bw logout >/dev/null
+}
+
+__decrypt() {
+    local enc_file_in="${1}"
+    local dec_file_base="${enc_file_in%.*}"
+    local dec_file="${dec_file_base}.json"
+
+    openssl enc -aes-256-cbc -pbkdf2 -iter 100000 -d -nopad -in "${enc_file_in}" -out "${dec_file}" || ! echo 'ERROR: could not decrypt' || return 1
+}
+
+__main() {
+    local mode='encrypt'
+    local dir_enc_out='.'
+    local enc_file_in=''
+
+    __parse_args "${@}" || return "${?}"
+
+    case "${mode}" in
+    'decrypt')
+        __decrypt "${enc_file_in}" || return "${?}"
+        ;;
+    'encrypt')
+        __encrypt "${dir_enc_out}" || return "${?}"
+        ;;
+    *)
+        echo >&2 "ERROR: ${base_this}: unexpected mode='${mode}'"
+        return 1
+        ;;
+    esac
+}
+
+__main "${@}"
