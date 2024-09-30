@@ -14,7 +14,7 @@ __parse_args() {
     while (("${#}")); do
         case "${1}" in
         #### pass --dry-run to underlying script
-        -d | --dry-run) dry_run='true' ;;
+        # -d | --dry-run) dry_run='true' ;;
         #### check unstaged files even if they are uncached (not tracked by git)
         --c1 | --check-unstaged)
             __is_bool "${2}" || return "${?}"
@@ -34,11 +34,11 @@ __parse_args() {
             shift
             ;;
         #### format script path
-        --ps | --path-script)
-            __is_file "${2}" || return "${?}"
-            path_script="${2}"
-            shift
-            ;;
+        # --ps | --path-script)
+        #     __is_file "${2}" || return "${?}"
+        #     path_script="${2}"
+        #     shift
+        #     ;;
         #### dir to locate files in
         --df | --dir-format)
             __is_dir "${2}" || return "${?}"
@@ -63,10 +63,9 @@ file_format() {
     #### default vars
     ## paths
     local dir_format='.'
-    local path_script="${dir_this}/../py/file_format.py"
     ## switches
     local check_unstaged='false'
-    local dry_run='false'
+    # local dry_run='false'
     local print_format_files='true'
     local print_skipped='false'
     ####

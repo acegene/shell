@@ -37,7 +37,9 @@ log_context="${base_this}" # implicitly used by __log func
 
 dir_shell="${dir_this}/../.."
 
+# shellcheck disable=SC1090
 for file in "${dir_shell}/bash/utils/"*.bash; do . "${file}" || exit "${?}"; done || exit "${?}"
+# shellcheck disable=SC1090
 for file in "${dir_shell}/sh/utils/"*.sh; do . "${file}" || exit "${?}"; done || exit "${?}"
 
 __parse_args() {
